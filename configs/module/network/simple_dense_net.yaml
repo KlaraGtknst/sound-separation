@@ -1,0 +1,6 @@
+model:
+  _target_: src.modules.models.simple_dense_net.SimpleDenseNet
+  input_size: 40
+  output_size: 1
+
+

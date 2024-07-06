@@ -1,0 +1,36 @@
+# @package _global_
+
+defaults:
+  - _self_
+  - datamodule: base_datamodule.yaml
+  - module: base_module.yaml
+  - callbacks: none.yaml
+  - logger: null # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
+  - trainer: default.yaml
+  - paths: default.yaml
+  - extras: default.yaml
+  - hydra: default.yaml
+
+  - experiment: null  # !important
+
+  # config for hyperparameter optimization
+  - hparams_search: null
+  - optional local: default.yaml
+  - debug: null
+
+task_name: "train"
+
+tags: ["dev"]
+
+train: True
+test: True
+
+save_state_dict: True
+
+# simply provide checkpoint path to resume training
+ckpt_path: null
+
+seed: 42
+
+# name of the run, accessed by loggers
+name: "lightning-template-0.1.0"
