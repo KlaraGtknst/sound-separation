@@ -3,3 +3,6 @@ sound_sep-venv/
 
 # Data
 data/
+
+# plots
+plots/
