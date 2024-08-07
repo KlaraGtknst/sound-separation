@@ -1,7 +1,7 @@
 import torch.nn as nn
 
 
-class mixit(nn.Module):
+class TDCNN(nn.Module):
     def __init__(self, cfg, *args, **kwargs):
 
         super().__init__(*args, **kwargs)

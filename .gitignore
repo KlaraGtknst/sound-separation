@@ -1,10 +1,12 @@
 # Custom
 
-sound_sep-venv/
-
 run.sh
 logs/
 .idea
+.venv
+
+# Virtual Environment
+sound_sep-venv/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -158,3 +160,6 @@ dmypy.json
 configs/local/default.yaml
 .env
 .autoenv
+
+# Virtual Environment
+sound_sep-venv/

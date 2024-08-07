@@ -2,6 +2,14 @@ train:
   order:
     [] # list of below augmentations/transformations
 
+valid:
+  order:
+    []
+
+test:
+  order:
+    []
+
 
 #train:
 #  order:
