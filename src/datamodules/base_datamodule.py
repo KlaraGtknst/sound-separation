@@ -59,8 +59,7 @@ class BaseDataModule(LightningDataModule):
         self.predict_set: Dict[str, Dataset] = OrderedDict()
 
     def _get_dataset_(
-        self, split_name: str, dataset_name: Optional[str] = None
-    ) -> Dataset:
+        self, split_name: str) -> Dataset:
 
         if self.transforms.get(split_name):
             transforms = TransformsWrapper(self.transforms.get(split_name))
@@ -68,30 +67,22 @@ class BaseDataModule(LightningDataModule):
             transforms = None
 
         cfg = self.cfg_datasets.get(split_name)
-        if dataset_name:
-            cfg = cfg.get(dataset_name)
         dataset: Dataset = hydra.utils.instantiate(cfg, transforms=transforms)
         return dataset
 
     def setup(self, stage: Optional[str] = None) -> None:
         """Load data. Set variables: `self.train_set`, `self.valid_set`,
-        `self.test_set`, `self.predict_set`.
+        `self.test_set`.
 
         This method is called by lightning with both `trainer.fit()` and
         `trainer.test()`, so be careful not to execute things like random split
         twice!
         """
-        # load and split datasets only if not loaded already
-        if not self.train_set and not self.valid_set and not self.test_set:
+        if stage == "fit" and not self.train_set and not self.valid_set:
             self.train_set = self._get_dataset_("train")
-            self.valid_set = self._get_dataset_("valid")
-            self.test_set = self._get_dataset_("test")
-        # load predict datasets only if it exists in config
-        if (stage == "predict") and self.cfg_datasets.get("predict"):
-            for dataset_name in self.cfg_datasets.get("predict").keys():
-                self.predict_set[dataset_name] = self._get_dataset_(
-                    "predict", dataset_name=dataset_name
-                )
+            self.train_set = self._get_dataset_("valid")
+        if stage == "test" and not self.test_set:
+            self.train_set = self._get_dataset_("test")
 
     def train_dataloader(
         self,

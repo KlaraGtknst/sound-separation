@@ -4,6 +4,7 @@ import hydra
 import numpy as np
 from omegaconf import DictConfig
 import torch
+from abc import ABC
 
 
 class TransformsWrapper:
@@ -46,9 +47,9 @@ class Compose:
     def __init__(self, transforms, *args, **kwargs):
         self.transforms = transforms
 
-    def __call__(self, data, **kwargs):
+    def __call__(self, data, *args, **kwargs):
         for t in self.transforms:
-            data = t(data)
+            data = t(data, *args, **kwargs)
         return data
 
     def __repr__(self) -> str:
@@ -58,3 +59,17 @@ class Compose:
             format_string += f"    {t}"
         format_string += "\n)"
         return format_string
+
+
+class AudioTransforms(ABC):
+    def __init__(self, p):
+        self.p = p
+
+    def __call__(self, inputs):
+        if np.random.rand() < self.p:
+            return self.apply(inputs)
+        else:
+            return inputs
+
+    def apply(self, inputs):
+        raise NotImplementedError()

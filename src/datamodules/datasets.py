@@ -4,6 +4,15 @@ import torch
 from torch.utils.data import Dataset
 
 
+class BirdsetDataset(Dataset):
+    def __init__(self,
+                 transforms: Callable,
+
+                 **kwargs):
+        super().__init__()
+
+
+
 class RandomDataset(Dataset):
     def __init__(
         self,

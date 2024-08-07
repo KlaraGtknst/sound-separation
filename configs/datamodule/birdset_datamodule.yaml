@@ -1,0 +1,41 @@
+_target_: src.datamodules.bird_datamodule.BirdsetDataModule
+
+defaults:
+  - _self_
+  - loaders: default.yaml
+  - transforms: default.yaml
+
+
+hf_dataset:
+  # will be used as kwargs in load_dataset(**hf_dataset) - mapping and filter
+  path: "DBD-research-group/BirdSet"
+  name: "XCM"
+  cache_dir: ${paths.data_dir}/${datamodule.hf_dataset.name}
+  trust_remote_code: True
+  num_proc: 5
+  split: train
+
+  # mappings are done first, internal order of 0,1...
+  mapping:
+    0:
+      _target_: src.datamodules.components.hf_mappings.AudioSegmenting
+      segment_length: 10
+      max_segments: 3
+
+  filter:
+    0:
+      _target_: src.datamodules.components.hf_filter.AudioLengthFilter
+      min_len: 0
+      max_len: 7
+
+# TODO mappings/filters
+
+datasets:
+  train:
+    _target_: src.datamodules.datasets.RandomDataset
+
+  valid:
+    _target_: src.datamodules.datasets.RandomDataset
+
+  test:
+    _target_: src.datamodules.datasets.RandomDataset
