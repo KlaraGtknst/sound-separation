@@ -1,68 +1,28 @@
-train:
-  order:
-    [] # list of below augmentations/transformations
+train:  # list of the order of below defined transformations, these will be applied in parallel to a singe instance
+  [normalize_dBFS,
+  audio_mixing,
+  instance_zscore]
 
 valid:
-  order:
-    []
+  [normalize_dBFS,
+  audio_mixing,
+  instance_zscore]
 
 test:
-  order:
-    []
+  [normalize_dBFS,
+  audio_mixing,
+  instance_zscore]
 
+normalize_dBFS:
+  _target_: src.datamodules.components.normalization.NormalizeDBFS
+  target_dBFS: -20.0
 
-#train:
-#  order:
-#    [
-#      "resize",
-#      "random_crop",
-#      "horizontal_flip",
-#      "rotate",
-#      "gauss_noise",
-#      "random_brightness_contrast",
-#      "normalize",
-#    ]
-#  resize:
-#    _target_: albumentations.Resize
-#    height: 256
-#    width: 256
-#    p: 1.0
-#  random_crop:
-#    _target_: albumentations.RandomCrop
-#    height: 224
-#    width: 224
-#    p: 1.0
-#  horizontal_flip:
-#    _target_: albumentations.HorizontalFlip
-#    p: 0.5
-#  rotate:
-#    _target_: albumentations.Rotate
-#    limit: [-5, 5]
-#    p: 0.5
-#  gauss_noise:
-#    _target_: albumentations.GaussNoise
-#    var_limit: [0.0, 2.0]
-#    p: 0.5
-#  random_brightness_contrast:
-#    _target_: albumentations.RandomBrightnessContrast
-#    brightness_limit: [-0.2, 0.2]
-#    contrast_limit: [-0.2, 0.2]
-#    p: 0.5
-#  normalize:
-#    _target_: torchvision.transforms.Normalize
-#    mean: [0.485, 0.456, 0.406]
-#    std: [0.229, 0.224, 0.225]
-#    p: 1.0
-#
-#valid_test_predict:
-#  order: ["resize", "normalize"]
-#  resize:
-#    _target_: albumentations.Resize
-#    height: 224
-#    width: 224
-#    p: 1.0
-#  normalize:
-#    _target_: albumentations.Normalize
-#    mean: [0.485, 0.456, 0.406]
-#    std: [0.229, 0.224, 0.225]
-#    p: 1.0
+audio_mixing:
+  _target_: src.datamodules.components.audio_mixing.AudioMixing
+  audio_paths: [/home/mwirth/projects/sound-seperation/data/dcase]
+  signal_ratio: 0.5  # 0.5 is where signal and noise are weighted equally at 50% each
+  target_dBFS: ${datamodule.transforms.normalize_dBFS.target_dBFS}
+
+instance_zscore:
+  _target_: src.datamodules.components.normalization.InstanceZscore
+  epsilon: 0

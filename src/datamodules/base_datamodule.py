@@ -58,13 +58,10 @@ class BaseDataModule(LightningDataModule):
         self.test_set: Optional[Dataset] = None
         self.predict_set: Dict[str, Dataset] = OrderedDict()
 
-    def _get_dataset_(
-        self, split_name: str) -> Dataset:
-
+    def _get_dataset_(self, split_name: str) -> Dataset:
+        transforms = None
         if self.transforms.get(split_name):
-            transforms = TransformsWrapper(self.transforms.get(split_name))
-        else:
-            transforms = None
+            transforms = TransformsWrapper(self.transforms, split_name)
 
         cfg = self.cfg_datasets.get(split_name)
         dataset: Dataset = hydra.utils.instantiate(cfg, transforms=transforms)
@@ -78,11 +75,11 @@ class BaseDataModule(LightningDataModule):
         `trainer.test()`, so be careful not to execute things like random split
         twice!
         """
-        if stage == "fit" and not self.train_set and not self.valid_set:
+        if (stage == "fit" or stage == "valid") and not self.train_set and not self.valid_set:
             self.train_set = self._get_dataset_("train")
-            self.train_set = self._get_dataset_("valid")
+            self.valid_set = self._get_dataset_("valid")
         if stage == "test" and not self.test_set:
-            self.train_set = self._get_dataset_("test")
+            self.test_set = self._get_dataset_("test")
 
     def train_dataloader(
         self,

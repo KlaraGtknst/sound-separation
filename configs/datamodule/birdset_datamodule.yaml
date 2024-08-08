@@ -12,8 +12,11 @@ hf_dataset:
   name: "XCM"
   cache_dir: ${paths.data_dir}/${datamodule.hf_dataset.name}
   trust_remote_code: True
-  num_proc: 5
   split: train
+  #num_proc: 5
+
+  select_columns: [audio, filepath, start_time, end_time, ebird_code, length]
+  # ebird_code_secondary
 
   # mappings are done first, internal order of 0,1...
   mapping:
@@ -25,17 +28,19 @@ hf_dataset:
   filter:
     0:
       _target_: src.datamodules.components.hf_filter.AudioLengthFilter
-      min_len: 0
-      max_len: 7
+      min_len: 3
+      max_len: 10
 
-# TODO mappings/filters
 
 datasets:
   train:
-    _target_: src.datamodules.datasets.RandomDataset
+    _target_: src.datamodules.datasets.BirdsetDataset
+    sample_rate: 32000
 
   valid:
-    _target_: src.datamodules.datasets.RandomDataset
+    _target_: src.datamodules.datasets.BirdsetDataset
+    sample_rate: 32000
 
   test:
-    _target_: src.datamodules.datasets.RandomDataset
+    _target_: src.datamodules.datasets.BirdsetDataset
+    sample_rate: 32000
