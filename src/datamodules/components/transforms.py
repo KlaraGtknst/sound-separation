@@ -8,20 +8,21 @@ from abc import ABC
 
 
 class TransformsWrapper:
-    def __init__(self, transforms_cfg: DictConfig) -> None:
+    def __init__(self, transforms_cfg: DictConfig, split_name: str) -> None:
         """TransformsWrapper module.
 
         Args:
             transforms_cfg (DictConfig): Transforms config.
+            split_name (str): current split name (train/valid/test/predict)
         """
-
+        order = transforms_cfg.get(split_name, None)
         augmentations = []
-        if not transforms_cfg.get("order") == [] and not transforms_cfg.get("order", None):
+        if order != [] and not order:
             raise RuntimeError(
                 "TransformsWrapper requires param <order>, i.e."
                 "order of augmentations as List[augmentation name]"
             )
-        for augmentation_name in transforms_cfg.get("order"):
+        for augmentation_name in order:
             augmentation = hydra.utils.instantiate(
                 transforms_cfg.get(augmentation_name), _convert_="object"
             )

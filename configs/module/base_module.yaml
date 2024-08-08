@@ -29,21 +29,18 @@ output_activation:
   _target_: "torch.sigmoid"
 
 optimizer:
-  _target_: torch.optim.AdamW
+  _target_: torch.optim.RAdam
   lr: 3.0e-4
   weight_decay: 1.0e-5
 
 scheduler:
   scheduler:
-    _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
-    mode: "max"
-    factor: 0.3
-    min_lr: 1.0e-9
-    patience: 10
-    verbose: True
+    _target_: src.modules.components.lr_scheduler.WarmupLinearDecayScheduler
+    warmup_percent: 0.1 # percent ie. 0.08 = 8%
+    total_steps: -1
   extras:
-    monitor: ${replace:"valid/__metric__"}
-    interval: "epoch"
+    #monitor: ${replace:"valid/__metric__"}
+    interval: "step"
     frequency: 1
 
 logging:
