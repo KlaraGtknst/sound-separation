@@ -2,7 +2,7 @@
 
 defaults:
   - _self_
-  - datamodule: base_datamodule.yaml
+  - datamodule: birdset_datamodule.yaml
   - module: base_module.yaml
   - callbacks: none.yaml
   - logger: null # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
