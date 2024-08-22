@@ -3,7 +3,6 @@ from typing import Any
 import hydra
 import numpy as np
 from omegaconf import DictConfig
-import torch
 from abc import ABC
 
 
@@ -62,7 +61,7 @@ class Compose:
         return format_string
 
 
-class AudioTransforms(ABC):
+class AudioTransform(ABC):
     def __init__(self, p):
         self.p = p
 
@@ -72,5 +71,5 @@ class AudioTransforms(ABC):
         else:
             return inputs
 
-    def apply(self, inputs):
+    def apply(self, data):
         raise NotImplementedError()
