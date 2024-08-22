@@ -11,12 +11,15 @@ class BirdsetDataset(Dataset):
     def __init__(self,
                  hf_ds: datasets.Dataset,
                  sample_rate: int = 32_000,
+                 column_selection: list = None,
                  transforms: Callable = None,
                  **kwargs):
         super().__init__()
         self.hf_ds = hf_ds
+        self.hf_ds_supervised = hf_ds.filter(lambda x: x["is_supervised"])
         self.sample_rate = sample_rate
         self.transforms = transforms
+        self.column_selection = column_selection
 
     def __len__(self):
         return len(self.hf_ds)
@@ -40,6 +43,10 @@ class BirdsetDataset(Dataset):
 
         if self.transforms:
             data = self.transforms(data)
+
+        if self.column_selection:
+            data = {k:v for k, v in data.items() if k in self.column_selection}
+        #print(data["audio"]["wave"].shape, data["mix"].shape)
 
         return data
 

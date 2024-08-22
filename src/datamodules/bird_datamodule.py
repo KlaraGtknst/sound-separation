@@ -4,9 +4,10 @@ from dataclasses import dataclass
 import hydra
 from omegaconf import DictConfig
 from torch.utils.data import Dataset, default_collate, DataLoader
-from torch.nn.functional import pad
 from datasets import Audio
 from datasets import load_dataset
+import torch
+import numpy as np
 
 from src.datamodules.components.transforms import TransformsWrapper
 from src.datamodules.base_datamodule import BaseDataModule
@@ -75,6 +76,11 @@ class BirdsetDataModule(BaseDataModule):
         dataset: Dataset = hydra.utils.instantiate(cfg,
                                                    hf_ds=self.hf_splits[split_name],
                                                    transforms=transforms)
+
+        for aug in transforms.augmentations.transforms:
+            if hasattr(aug, "set_dataset"):
+                aug.set_dataset(dataset)
+
         return dataset
 
     def setup(self, stage: Optional[str] = None) -> None:
@@ -91,42 +97,40 @@ class BirdsetDataModule(BaseDataModule):
     def test_dataloader(self):
         return DataLoader(self.test_set, **self.cfg_loaders.get("test"), collate_fn=_custom_collate)
 
-import torch
-import numpy as np
-
 def _custom_collate(batch):
-    # First, filter and convert lists and numpy arrays to tensors
-    processed_batch = []
-    max_length = {}
-    for item in batch:
-        processed_item = {}
-        for key, value in item.items():
-            if isinstance(value, int):
-                processed_item[key] = value
-            elif isinstance(value, list):
-                tensor = torch.tensor(value)
-                processed_item[key] = tensor
-                max_length[key] = max(max_length.get(key, 0), tensor.size(0))
-            elif isinstance(value, np.ndarray):
-                tensor = torch.from_numpy(value)
-                processed_item[key] = tensor
-                max_length[key] = max(max_length.get(key, 0), tensor.size(0))
-            elif isinstance(value, dict) and 'wave' in value and 'sr' in value:
-                tensor = torch.tensor(value['wave'])
-                processed_item[key] = tensor
-                max_length[key] = max(max_length.get(key,0), tensor.size(0))
-        processed_batch.append(processed_item)
+    # Extract the audio waves and mix arrays
+    waves = [item['audio']['wave'] for item in batch]
+    mixes = [item['mix'] for item in batch]
 
-    # Now pad arrays where necessary
-    for item in processed_batch:
-        for key in max_length:
-            if key in item and isinstance(item[key], torch.Tensor):
-                pad_size = max_length[key] - item[key].size(0)
-                if pad_size > 0:
-                    item[key] = pad(item[key], (0, pad_size))
+    # Get maximum length for padding
+    max_wave_len = max(wave.shape[1] for wave in waves)
+    max_mix_len = max(len(mix) for mix in mixes)
 
-    # Use the default_collate to handle the final batch conversion
-    return default_collate(processed_batch)
+    # Pad waves
+    padded_waves = []
+    for wave in waves:
+        # Create a new array of zeros with the maximum length
+        padded_wave = np.zeros((wave.shape[0], max_wave_len))
+        # Copy the original wave data into the padded array
+        padded_wave[:, :wave.shape[1]] = wave
+        padded_waves.append(torch.tensor(padded_wave, dtype=torch.float32))
+
+    # Pad mixes
+    padded_mixes = []
+    for mix in mixes:
+        # Create a new array of zeros with the maximum length
+        padded_mix = np.zeros(max_mix_len)
+        # Copy the original mix data into the padded array
+        padded_mix[:len(mix)] = mix
+        padded_mixes.append(torch.tensor(padded_mix, dtype=torch.float32))
+
+    # Update the batch with padded data
+    for i, item in enumerate(batch):
+        item['audio']['wave'] = padded_waves[i]
+        item['mix'] = padded_mixes[i]
+
+    # Use default_collate to handle batching
+    return default_collate(batch)
 
 
 
