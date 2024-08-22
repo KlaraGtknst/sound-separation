@@ -1,7 +1,7 @@
 train:
   batch_size: 20
   shuffle: True
-  num_workers: 8
+  num_workers: 1
   drop_last: True
   pin_memory: True
 

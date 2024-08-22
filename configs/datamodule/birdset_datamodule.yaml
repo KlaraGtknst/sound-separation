@@ -15,12 +15,19 @@ hf_dataset:
   split: train
   #num_proc: 5
 
-  select_columns: [audio, filepath, start_time, end_time, ebird_code, length]
+  select_columns: [audio, filepath, start_time, end_time, ebird_code, length, quality, ebird_code_secondary]
   # ebird_code_secondary
 
   # mappings are done first, internal order of 0,1...
   mapping:
     0:
+      _target_: src.datamodules.components.hf_mappings.LoadLengths
+    1:
+      _target_: src.datamodules.components.hf_mappings.FindSupervised
+      length: 10
+      qualitys: [A,B]
+      secondarys_max: 0
+    2:
       _target_: src.datamodules.components.hf_mappings.AudioSegmenting
       segment_length: 10
       max_segments: 3
@@ -28,7 +35,7 @@ hf_dataset:
   filter:
     0:
       _target_: src.datamodules.components.hf_filter.AudioLengthFilter
-      min_len: 3
+      min_len: 5
       max_len: 10
 
 
@@ -36,11 +43,14 @@ datasets:
   train:
     _target_: src.datamodules.datasets.BirdsetDataset
     sample_rate: 32000
+    column_selection: ["audio", "mix", "start_time", "end_time", is_supervised]
 
   valid:
     _target_: src.datamodules.datasets.BirdsetDataset
     sample_rate: 32000
+    column_selection: ["audio", "mix", "start_time", "end_time", is_supervised]
 
   test:
     _target_: src.datamodules.datasets.BirdsetDataset
     sample_rate: 32000
+    column_selection: ["audio", "mix", "start_time", "end_time", is_supervised]
