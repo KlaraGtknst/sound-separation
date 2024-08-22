@@ -58,7 +58,7 @@ class MixItLoss(nn.Module):
         assert est_targets.shape[0] == targets.shape[0]
         assert est_targets.shape[2] == targets.shape[2]
 
-        if not self.generalized:  # TODO dont want this
+        if not self.generalized:
             min_loss, min_loss_idx, parts = self.best_part_mixit(
                 self.loss_func, est_targets, targets, **kwargs
             )

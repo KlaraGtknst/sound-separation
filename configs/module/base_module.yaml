@@ -9,7 +9,7 @@ _target_: src.modules.base_module.BaseModule
 
 defaults:
   - _self_
-  - network: simple_dense_net.yaml
+  - network: tdcnnpp.yaml
 
 loss:
   _target_: "torch.nn.BCEWithLogitsLoss"
@@ -17,7 +17,6 @@ loss:
 metrics:
   main:
     _target_: "torchmetrics.Accuracy"
-    task: "binary"
   valid_best:
     _target_: "torchmetrics.MaxMetric"
   additional:
@@ -39,7 +38,6 @@ scheduler:
     warmup_percent: 0.1 # percent ie. 0.08 = 8%
     total_steps: -1
   extras:
-    #monitor: ${replace:"valid/__metric__"}
     interval: "step"
     frequency: 1
 

@@ -1,0 +1,6 @@
+model:
+  _target_: src.modules.models.tdcnn.TDConvNetpp
+  in_chan: 1
+  n_src: 8
+
+
