@@ -1,0 +1,14 @@
+# disable python warnings if they annoy you
+ignore_warnings: False
+
+# trainer plugins
+plugins: null
+
+# model state dict
+state_dict_saving_params:
+  symbols: 6
+  exceptions: ["loss"]
+
+# predictions
+predictions_saving_params:
+  output_format: "json"

@@ -1,0 +1,33 @@
+train:  # list of the order of below defined transformations, these will be applied in parallel to a singe instance
+  [#normalize_dBFS,
+  supervised_audio_mixing,
+  mixture_of_mixtures]
+
+valid:
+  [#normalize_dBFS,
+   supervised_audio_mixing,
+   mixture_of_mixtures]
+
+test:
+  [#normalize_dBFS,
+   supervised_audio_mixing,
+   mixture_of_mixtures]
+
+normalize_dBFS:
+  _target_: src.datamodules.components.normalization.NormalizeDBFS
+  target_dBFS: -20.0
+
+mixture_of_mixtures:
+  _target_: src.datamodules.components.audio_mixing.MixtureOfMixtures
+  p: 1
+
+supervised_audio_mixing:
+  _target_: src.datamodules.components.audio_mixing.SupervisedAudioMixing
+  p: 1
+  audio_paths: [/home/mwirth/projects/sound-seperation/data/dcase]
+  signal_ratio: 0.5  # 0.5 is where signal and noise are weighted equally at 50% each
+  target_dBFS: ${datamodule.transforms.normalize_dBFS.target_dBFS}
+
+instance_zscore:
+  _target_: src.datamodules.components.normalization.InstanceZscore
+  epsilon: 0
