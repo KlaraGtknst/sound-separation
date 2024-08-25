@@ -5,8 +5,8 @@ defaults:
   - datamodule: birdset_datamodule.yaml
   - module: base_module.yaml
   - callbacks: none.yaml
-  - logger: null # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
-  - trainer: default.yaml
+  - logger: wandb.yaml # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
+  - trainer: gpu.yaml
   - paths: default.yaml
   - extras: default.yaml
   - hydra: default.yaml
@@ -25,7 +25,7 @@ tags: ["dev"]
 train: True
 test: True
 
-save_state_dict: True
+save_state_dict: False
 
 # simply provide checkpoint path to resume training
 ckpt_path: null

@@ -4,8 +4,11 @@
 import torch
 from torch import nn
 import inspect
+from torchaudio.transforms import Spectrogram, InverseSpectrogram
+from asteroid_filterbanks import make_enc_dec
 
 from src.modules.models import norms, activations
+
 
 
 def has_arg(fn, name):
@@ -221,10 +224,10 @@ class TDConvNet(nn.Module):
             tcn_out = layer(output)
             if self.skip_chan:
                 residual, skip = tcn_out
-                skip_connection = skip_connection + skip
+                skip_connection += skip
             else:
                 residual = tcn_out
-            output = output + residual
+            output += residual
         # Use residual output when no skip connection
         mask_inp = skip_connection if self.skip_chan else output
         score = self.mask_net(mask_inp)
@@ -294,6 +297,7 @@ class TDConvNetpp(nn.Module):
         self,
         in_chan,
         n_src,
+        enc_dec_kwargs,
         out_chan=None,
         n_blocks=8,
         n_repeats=3,
@@ -317,6 +321,8 @@ class TDConvNetpp(nn.Module):
         self.conv_kernel_size = conv_kernel_size
         self.norm_type = norm_type
         self.mask_act = mask_act
+
+        self.enc, self.dec = make_enc_dec(**enc_dec_kwargs)
 
         layer_norm = norms.get(norm_type)(in_chan)
         bottleneck_conv = nn.Conv1d(in_chan, bn_chan, 1)
@@ -360,15 +366,19 @@ class TDConvNetpp(nn.Module):
         out_size = skip_chan if skip_chan else bn_chan
         self.consistency = nn.Linear(out_size, n_src)
 
-    def forward(self, mixture_w):
+    def forward(self, wave):
         r"""Forward.
 
         Args:
-            mixture_w (:class:`torch.Tensor`): Tensor of shape $(batch, nfilters, nframes)$
+            wave (:class:`torch.Tensor`): Tensor of shape $(batch, time)$
 
         Returns:
             :class:`torch.Tensor`: estimated mask of shape $(batch, nsrc, nfilters, nframes)$
         """
+
+        wave = wave.unsqueeze(1)
+        mixture_w = self.enc(wave)
+
         batch, n_filters, n_frames = mixture_w.size()
         output = self.bottleneck(mixture_w)
         output_copy = output
@@ -389,7 +399,7 @@ class TDConvNetpp(nn.Module):
                     residual, skip = tcn_out
                     skip_connection = skip_connection + skip
                 else:
-                    residual, _ = tcn_out
+                    residual = tcn_out
                 # Initialized exp decay scale factor TDCNpp for residual connections
                 scale = self.scaling_param[r, x - 1] if x > 0 else 1.0
                 residual = residual * scale
@@ -403,7 +413,13 @@ class TDConvNetpp(nn.Module):
         weights = self.consistency(mask_inp.mean(-1))
         weights = torch.nn.functional.softmax(weights, -1)
 
-        return est_mask, weights
+        masked_tf_rep = est_mask * mixture_w.unsqueeze(1)
+
+        est_wave = self.dec(masked_tf_rep)
+
+        # TODO apply weights
+
+        return est_mask, est_wave, weights
 
     def get_config(self):
         config = {
@@ -421,14 +437,4 @@ class TDConvNetpp(nn.Module):
         }
         return config
 
-
-if __name__ == "__main__":
-    model = TDConvNetpp(1, 2, out_chan=2)
-
-    # Dummy input: [batch_size, channels, time]
-    x = torch.randn(1, 1, 8_000)
-
-    output = model(x)
-
-    print(output.shape)
 

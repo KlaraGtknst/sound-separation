@@ -30,12 +30,12 @@ hf_dataset:
     2:
       _target_: src.datamodules.components.hf_mappings.AudioSegmenting
       segment_length: 10
-      max_segments: 3
+      max_segments: 5  # i.e. segment_length * max_segments = max audio length
 
   filter:
     0:
       _target_: src.datamodules.components.hf_filter.AudioLengthFilter
-      min_len: 5
+      min_len: 3
       max_len: 10
 
 

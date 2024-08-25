@@ -57,7 +57,7 @@ class BaseModule(LightningModule):
         self.logging_cfg = logging
 
         self.loss = hydra.utils.instantiate(self.loss_cfg)
-        self.output_activation = hydra.utils.instantiate(self.output_activation_cfg, _partial_=True)
+        #self.output_activation = hydra.utils.instantiate(self.output_activation_cfg, _partial_=True)
 
         main_metric, valid_metric_best, add_metrics = load_metrics(self.metrics_cfg)
         self.train_metric = main_metric.clone()
@@ -74,16 +74,29 @@ class BaseModule(LightningModule):
         return self.model.forward(x)
 
     def model_step(self, batch: Any, *args: Any, **kwargs: Any) -> Any:
-        logits = self.forward(batch["input"], *args, **kwargs)
-        loss = self.loss(logits, batch["label"])
-        preds = self.output_activation(logits)
-        return loss, preds, batch["label"]
+        est_mask, est_wave, weights = self.forward(batch["mix"], *args, **kwargs)
+
+
+
+        # mixture_spec = torch.stft(batch["mix"], n_fft=512, win_length=512, hop_length=128, window=torch.hann_window(512, device="cuda") ,return_complex=True)
+        # est_mask, weights = self.forward(mixture_spec.real, *args, **kwargs)
+        # batched_waves = []
+        # for b_idx in range(est_mask.shape[0]):
+        #     spec = est_mask[b_idx] * mixture_spec[b_idx]
+        #     batched_waves.append(torch.istft(spec, n_fft=512, win_length=512, hop_length=128, window=torch.hann_window(512, device="cuda")))
+        # waves = torch.stack(batched_waves)
+        # waves = self.enforce_mixture_consistency_time_domain(batch["mix"], waves, weights, "magsq")
+
+        loss, preds = self.loss(est_wave, batch["audio"]["wave"], return_est=True)
+
+        return loss, preds, batch["audio"]["wave"]
 
     def on_train_start(self) -> None:
+        pass
         # by default lightning executes validation step sanity checks before
         # training starts, so we need to make sure valid_metric_best doesn't store
         # accuracy from these checks
-        self.valid_metric_best.reset()
+        #self.valid_metric_best.reset()
 
     def training_step(self, batch: Any, batch_idx: int) -> Any:
         loss, preds, targets = self.model_step(batch, batch_idx)
@@ -93,14 +106,14 @@ class BaseModule(LightningModule):
             **self.logging_cfg,
         )
 
-        self.train_metric(preds, targets)
+        self.train_metric(preds, targets, batch["mix"])
         self.log(
             f"train/{self.train_metric.__class__.__name__}",
             self.train_metric,
             **self.logging_cfg,
         )
 
-        self.train_add_metrics(preds, targets)
+        self.train_add_metrics(preds, targets, batch["mix"])
         self.log_dict(self.train_add_metrics, **self.logging_cfg)
 
         # Lightning keeps track of `training_step` outputs and metrics on GPU for
@@ -117,28 +130,29 @@ class BaseModule(LightningModule):
             **self.logging_cfg,
         )
 
-        self.valid_metric(preds, targets)
+        self.valid_metric(preds, targets, mix=batch["mix"])
         self.log(
             f"valid/{self.valid_metric.__class__.__name__}",
             self.valid_metric,
             **self.logging_cfg,
         )
 
-        self.valid_add_metrics(preds, targets)
+        self.valid_add_metrics(preds, targets, batch["mix"])
         self.log_dict(self.valid_add_metrics, **self.logging_cfg)
         return {"loss": loss}
 
     def on_validation_epoch_end(self) -> None:
-        valid_metric = self.valid_metric.compute()  # get current valid metric
-        self.valid_metric_best(valid_metric)  # update best so far valid metric
-        # log `valid_metric_best` as a value through `.compute()` method, instead
-        # of as a metric object otherwise metric would be reset by lightning
-        # after each epoch
-        self.log(
-            f"valid/{self.valid_metric.__class__.__name__}_best",
-            self.valid_metric_best.compute(),
-            **self.logging_cfg,
-        )
+        pass
+        # valid_metric = self.valid_metric.compute()  # get current valid metric
+        # self.valid_metric_best(valid_metric)  # update best so far valid metric
+        # # log `valid_metric_best` as a value through `.compute()` method, instead
+        # # of as a metric object otherwise metric would be reset by lightning
+        # # after each epoch
+        # self.log(
+        #     f"valid/{self.valid_metric.__class__.__name__}_best",
+        #     self.valid_metric_best.compute(),
+        #     **self.logging_cfg,
+        # )
 
     def test_step(self, batch: Any, batch_idx: int) -> Any:
         loss, preds, targets = self.model_step(batch, batch_idx)
@@ -146,14 +160,14 @@ class BaseModule(LightningModule):
             f"test/{self.loss.__class__.__name__}", loss, **self.logging_cfg
         )
 
-        self.test_metric(preds, targets)
+        self.test_metric(preds, targets, batch["mix"])
         self.log(
             f"test/{self.test_metric.__class__.__name__}",
             self.test_metric,
             **self.logging_cfg,
         )
 
-        self.test_add_metrics(preds, targets)
+        self.test_add_metrics(preds, targets, batch["mix"])
         self.log_dict(self.test_add_metrics, **self.logging_cfg)
         return {"loss": loss}
 

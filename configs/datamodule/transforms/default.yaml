@@ -1,18 +1,17 @@
 train:  # list of the order of below defined transformations, these will be applied in parallel to a singe instance
-  [normalize_dBFS,
+  [#normalize_dBFS,
   supervised_audio_mixing,
-  mixture_of_mixtures,
-  instance_zscore]
+  mixture_of_mixtures]
 
 valid:
-  [normalize_dBFS,
-  background_audio_mixing,
-  instance_zscore]
+  [#normalize_dBFS,
+   supervised_audio_mixing,
+   mixture_of_mixtures]
 
 test:
-  [normalize_dBFS,
-  background_audio_mixing,
-  instance_zscore]
+  [#normalize_dBFS,
+   supervised_audio_mixing,
+   mixture_of_mixtures]
 
 normalize_dBFS:
   _target_: src.datamodules.components.normalization.NormalizeDBFS

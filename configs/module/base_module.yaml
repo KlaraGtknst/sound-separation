@@ -12,20 +12,26 @@ defaults:
   - network: tdcnnpp.yaml
 
 loss:
-  _target_: "torch.nn.BCEWithLogitsLoss"
+  _target_: "src.modules.losses.MixItLoss"
+  loss_func:
+    _target_: src.modules.losses.MultiSrcNegSDR
+    sdr_type: snr
+  generalized: True
+  reduction: mean
+
 
 metrics:
   main:
-    _target_: "torchmetrics.Accuracy"
+    _target_: src.modules.metrics.components.separation.ScaleInvariantSignalNoiseRatio
   valid_best:
-    _target_: "torchmetrics.MaxMetric"
+    _target_: torchmetrics.MaxMetric
   additional:
-    AUROC:
-      _target_: "torchmetrics.AUROC"
-      task: "binary"
+    SNR:
+      _target_: src.modules.metrics.components.separation.SignalNoiseRatio
+    SI_SNRi:
+      _target_: src.modules.metrics.components.separation.ScaleInvariantSignalNoiseRatioImprovement
 
-output_activation:
-  _target_: "torch.sigmoid"
+output_activation: null
 
 optimizer:
   _target_: torch.optim.RAdam
@@ -35,14 +41,14 @@ optimizer:
 scheduler:
   scheduler:
     _target_: src.modules.components.lr_scheduler.WarmupLinearDecayScheduler
-    warmup_percent: 0.1 # percent ie. 0.08 = 8%
+    warmup_percent: 0.01 # percent ie. 0.08 = 8%
     total_steps: -1
   extras:
     interval: "step"
     frequency: 1
 
 logging:
-  on_step: False
+  on_step: True
   on_epoch: True
   sync_dist: True
   prog_bar: True

@@ -11,6 +11,7 @@ from pytorch_lightning import (
     seed_everything,
 )
 from pytorch_lightning.loggers import Logger
+from pytorch_lightning.callbacks import LearningRateMonitor
 
 from src import utils
 
@@ -47,7 +48,6 @@ def main(cfg: DictConfig) -> Tuple[dict, dict]:
     """
 
     log.info('Using config: \n%s', OmegaConf.to_yaml(cfg))
-
     # set seed for random number generators in pytorch, numpy and python.random
     if cfg.get("seed"):
         log.info(f"Seed everything with <{cfg.seed}>")
@@ -59,7 +59,14 @@ def main(cfg: DictConfig) -> Tuple[dict, dict]:
         cfg.datamodule, _recursive_=False
     )
 
+    datamodule.prepare_data()
+    datamodule.setup("fit")
+
     # Init lightning model
+    if cfg.module.scheduler.extras.interval == "epoch":
+        cfg.module.scheduler.scheduler["total_steps"] = (len(datamodule.train_dataloader())  * cfg.trainer.max_epochs) // cfg.datamodule.loaders.train.batch_size
+    else:
+        cfg.module.scheduler.scheduler["total_steps"] = len(datamodule.train_dataloader())  * cfg.trainer.max_epochs
     log.info(f"Instantiating lightning model <{cfg.module._target_}>")
     model: LightningModule = hydra.utils.instantiate(
         cfg.module, _recursive_=False
@@ -70,6 +77,7 @@ def main(cfg: DictConfig) -> Tuple[dict, dict]:
     callbacks: List[Callback] = utils.instantiate_callbacks(
         cfg.get("callbacks")
     )
+    callbacks.append(LearningRateMonitor("step"))
 
     # Init loggers
     log.info("Instantiating loggers...")

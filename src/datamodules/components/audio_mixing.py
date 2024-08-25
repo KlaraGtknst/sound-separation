@@ -44,10 +44,6 @@ class SupervisedAudioMixing(AudioTransform):
 
         bg_audio, bg_sr = sf.read(background_path, start=random_start, stop=random_start + len(audio))
 
-        if bg_audio.sum() == 0:
-            print(random_start, random_start + len(audio))
-            print(info.duration)
-
         if bg_audio.ndim != 1:  # ensure bg_audio is mono
             bg_audio = bg_audio.swapaxes(1, 0)
             bg_audio = librosa.to_mono(bg_audio)
@@ -60,7 +56,7 @@ class SupervisedAudioMixing(AudioTransform):
         else:
             audio = np.pad(audio, (0, bg_audio.shape[0] - audio.shape[0]), 'constant')
 
-        bg_audio = self.normalize(bg_audio)
+        #bg_audio = self.normalize(bg_audio)
         mix = audio * self.signal_ratio + bg_audio * (1 - self.signal_ratio)
         data["audio"]["wave"] = np.stack([audio, bg_audio])
         data["mix"] = mix
