@@ -55,8 +55,8 @@ class MixItLoss(nn.Module):
               if return_est is True. torch.Tensor of shape :math:`(batch, nmix, ...)`.
         """
         # Check input dimensions
-        assert est_targets.shape[0] == targets.shape[0]
-        assert est_targets.shape[2] == targets.shape[2]
+        assert est_targets.shape[0] == targets.shape[0], f"{est_targets.shape=} and {targets.shape=}"
+        assert est_targets.shape[2] == targets.shape[2], f"{est_targets.shape=} and {targets.shape=}"
 
         if not self.generalized:
             min_loss, min_loss_idx, parts = self.best_part_mixit(

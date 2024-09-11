@@ -24,7 +24,8 @@ mixture_of_mixtures:
 supervised_audio_mixing:
   _target_: src.datamodules.components.audio_mixing.SupervisedAudioMixing
   p: 1
-  audio_paths: [/home/mwirth/projects/sound-seperation/data/dcase]
+  audio_paths:
+    - ${paths.data_dir}/dcase
   signal_ratio: 0.5  # 0.5 is where signal and noise are weighted equally at 50% each
   target_dBFS: ${datamodule.transforms.normalize_dBFS.target_dBFS}
 

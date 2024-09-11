@@ -26,11 +26,12 @@ metrics:
   valid_best:
     _target_: torchmetrics.MaxMetric
   additional:
-    SNR:
-      _target_: src.modules.metrics.components.separation.SignalNoiseRatio
-    SI_SNRi:
+#    SNR:
+#      _target_: src.modules.metrics.components.separation.SignalNoiseRatio
+    SI-SNRi:
       _target_: src.modules.metrics.components.separation.ScaleInvariantSignalNoiseRatioImprovement
-
+    MoMi:
+      _target_: src.modules.metrics.components.separation.MoMi
 output_activation: null
 
 optimizer:

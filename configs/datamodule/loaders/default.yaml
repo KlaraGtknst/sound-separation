@@ -1,5 +1,5 @@
 train:
-  batch_size: 5
+  batch_size: 2
   shuffle: True
   num_workers: 10
   drop_last: True

@@ -31,7 +31,7 @@ class BirdsetDataset(Dataset):
                            start=int(data["start_time"] * sr),
                            stop=int(data["end_time"] * sr))
 
-        if wave.ndim != 1:  # ensure wave is mono
+        if wave.ndim > 1:  # ensure wave is mono
             wave = wave.swapaxes(1, 0)
             wave = librosa.to_mono(wave)
 

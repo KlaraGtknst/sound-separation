@@ -33,6 +33,7 @@ class BirdsetDataModule(BaseDataModule):
         """
         super().__init__(datasets=datasets, loaders=loaders, transforms=transforms)
         self.cfg_hf_dataset = hf_dataset
+        self.cfg_datasets = datasets
 
         self.mapping_cfg = hf_dataset.pop("mapping")
         self.filter_cfg = hf_dataset.pop("filter")
@@ -104,7 +105,9 @@ def _custom_collate(batch):
 
     # Get maximum length for padding
     max_wave_len = max(wave.shape[1] for wave in waves)
+    max_wave_len = batch[0]["audio"]["sr"] * 10
     max_mix_len = max(len(mix) for mix in mixes)
+    max_mix_len = batch[0]["audio"]["sr"] * 10
 
     # Pad waves
     padded_waves = []

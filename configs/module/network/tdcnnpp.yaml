@@ -1,14 +1,14 @@
 model:
   _target_: src.modules.models.tdcnn.TDConvNetpp
-  in_chan: 512
+  in_chan: 256
   n_src: 2
   #out_chan: 1
   n_blocks: 8 # num_dilations=8
-  n_repeats: 3 # num_repeats=4
+  n_repeats: 4 # num_repeats=4
   skip_chan: 128 # add_skip_residual_connection=False
   enc_dec_kwargs:
     fb_name: free
-    n_filters: 512
+    n_filters: 256 # needs to be the same as model.in_chan from above
     kernel_size: 256
     sample_rate: ${datamodule.datasets.train.sample_rate}
 
