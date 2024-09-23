@@ -2,6 +2,7 @@ from itertools import permutations
 from torchmetrics import Metric
 from torchmetrics.audio import ScaleInvariantSignalNoiseRatio as SISNR
 from torchmetrics.audio import SignalNoiseRatio as SNR
+from torchmetrics.audio import SignalDistortionRatio as SDR
 from torchmetrics.audio.snr import scale_invariant_signal_noise_ratio
 import torch
 from torch import Tensor
@@ -9,6 +10,11 @@ from torch import Tensor
 
 
 class SignalNoiseRatio(SNR):
+    def update(self, preds: Tensor, target: Tensor, *args, **kwargs) -> None:
+        super().update(preds=preds, target=target)
+
+
+class SignalDistortionRatio(SDR):
     def update(self, preds: Tensor, target: Tensor, *args, **kwargs) -> None:
         super().update(preds=preds, target=target)
 

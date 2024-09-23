@@ -1,16 +1,22 @@
 model:
   _target_: src.modules.models.tdcnn.TDConvNetpp
   in_chan: 256
-  n_src: 2
-  #out_chan: 1
+  n_src: 4
   n_blocks: 8 # num_dilations=8
   n_repeats: 4 # num_repeats=4
   skip_chan: 128 # add_skip_residual_connection=False
-  enc_dec_kwargs:
-    fb_name: free
-    n_filters: 256 # needs to be the same as model.in_chan from above
+
+  encoder:
+    _target_: src.modules.models.tdcnn.WaveformEncoder
+    num_filters: ${module.network.model.in_chan}
     kernel_size: 256
-    sample_rate: ${datamodule.datasets.train.sample_rate}
+    stride: null # if null uses default of kernel // 2. This means default is 50% overlap
+  decoder:
+    _target_: src.modules.models.tdcnn.WaveformDecoder
+    # kwargs need to be the same as encoder
+    num_filters: ${module.network.model.encoder.num_filters}
+    kernel_size: ${module.network.model.encoder.kernel_size}
+    stride: null # if null uses default of kernel // 2
 
 
 

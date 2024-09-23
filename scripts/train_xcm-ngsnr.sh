@@ -2,7 +2,7 @@
 #SBATCH --partition=main
 #SBATCH --mem=64GB
 #SBATCH --cpus-per-task=32
-#SBATCH --output=/mnt/stud/work/deeplearninglab/ss2024/sound-separation/logs/mw/xcm1_%x_%a.log
+#SBATCH --output=/mnt/stud/work/deeplearninglab/ss2024/sound-separation/logs/mw/xcm_ngsnr_%x_%a.log
 #SBATCH --job-name=dll-separation
 #SBATCH --gres=gpu:1
 #SBATCH --array=0
@@ -16,7 +16,7 @@ conda env list
 cd /mnt/stud/work/deeplearninglab/ss2024/sound-separation
 
 SEED=$SLURM_ARRAY_TASK_ID
-EXP=cluster_xcm.yaml # Path to the experiment config
+EXP=cluster_xcm-ngsnr.yaml # Path to the experiment config
 
 export HYDRA_FULL_ERROR=1
 

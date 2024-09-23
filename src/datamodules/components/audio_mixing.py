@@ -5,7 +5,6 @@ import numpy as np
 import soundfile as sf
 import librosa
 
-from src.datamodules.components.normalization import NormalizeDBFS
 from src.datamodules.components.transforms import AudioTransform
 from src import utils
 from src.datamodules.datasets import BirdsetDataset
@@ -18,15 +17,13 @@ class SupervisedAudioMixing(AudioTransform):
     def __init__(self,
                  p: float,
                  audio_paths: list[str],
-                 signal_ratio: float = 0.5,
-                 target_dBFS: float = -20.0):
+                 normalization: callable = None):
 
         super().__init__(p=p)
 
         self.audio_paths = self._find_audio_files(audio_paths)
 
-        self.normalize = NormalizeDBFS(target_dBFS=target_dBFS)
-        self.signal_ratio = signal_ratio
+        self.normalization = normalization
 
     def apply(self, data):
         if not data["is_supervised"]:  # only apply supervised mixtures when condition true
@@ -51,13 +48,15 @@ class SupervisedAudioMixing(AudioTransform):
         if sr != bg_sr:  # ensure bg_audio is correct sample_rate
             bg_audio = librosa.resample(bg_audio, orig_sr=bg_sr, target_sr=sr)
 
+        if self.normalization:
+            bg_audio = self.normalization(bg_audio)
+
         if bg_audio.shape[0] < audio.shape[0]:
             bg_audio = np.pad(bg_audio, (0, audio.shape[0] - bg_audio.shape[0]), 'constant')
         else:
             audio = np.pad(audio, (0, bg_audio.shape[0] - audio.shape[0]), 'constant')
 
-        #bg_audio = self.normalize(bg_audio)
-        mix = audio * self.signal_ratio + bg_audio * (1 - self.signal_ratio)
+        mix = audio + bg_audio
         data["audio"]["wave"] = np.stack([audio, bg_audio])
         data["mix"] = mix
 
@@ -88,20 +87,17 @@ class SupervisedAudioMixing(AudioTransform):
 
 
 class MixtureOfMixtures(AudioTransform):
-    def __init__(self, p: float, signal_ratio: float = 0.5):
+    def __init__(self,
+                 p: float,
+                 normalization: callable = None):
         super().__init__(p=p)
         self.dataset = None
-        self.signal_ratio = signal_ratio
+        self.normalization = normalization
 
     def set_dataset(self, dataset: BirdsetDataset):
         self.dataset = deepcopy(dataset)
-        # ensure that all augmentation after this one (including self) are not used
-        l = []
-        for i in self.dataset.transforms.augmentations.transforms:
-            if isinstance(i, AudioTransform):
-                break
-            l.append(i)
-        self.dataset.transforms.augmentations.transforms = l
+        # remove all augmentations (may include normalization)
+        self.dataset.transforms.augmentations.transforms = []
 
     def apply(self, data):
         if "mix" in data:  # only apply mixing when no mix is present
@@ -111,15 +107,18 @@ class MixtureOfMixtures(AudioTransform):
 
         mix_data = random.choice(self.dataset)
         mix_audio = mix_data["audio"]["wave"]
+
+        if self.normalization:
+            mix_audio = self.normalization(mix_audio)
+
         if mix_audio.shape[0] < audio.shape[0]:
             mix_audio = np.pad(mix_audio, (0, audio.shape[0] - mix_audio.shape[0]), 'constant')
         else:
             audio = np.pad(audio, (0, mix_audio.shape[0] - audio.shape[0]), 'constant')
 
-        mix = audio * self.signal_ratio + mix_audio * (1 - self.signal_ratio)
+        mix = audio + mix_audio
 
         data["audio"]["wave"] = np.stack([audio, mix_audio])
-        #data["filepath_mix"] = mix_data["filepath"]
         data["mix"] = mix
 
         return data
