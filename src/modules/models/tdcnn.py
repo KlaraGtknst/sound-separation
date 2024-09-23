@@ -4,8 +4,6 @@
 import torch
 from torch import nn
 import inspect
-from torchaudio.transforms import Spectrogram, InverseSpectrogram
-from asteroid_filterbanks import make_enc_dec
 
 from src.modules.models import norms, activations
 
@@ -253,6 +251,56 @@ class TDConvNet(nn.Module):
         return config
 
 
+class WaveformEncoder(nn.Module):
+    def __init__(self, num_filters, kernel_size, stride=None):
+        super(WaveformEncoder, self).__init__()
+        stride = stride if stride else kernel_size // 2
+
+        self.conv1d = nn.Conv1d(
+            in_channels=1,  # Assuming single-channel (mono) input
+            out_channels=num_filters,  # Number of basis filters
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=((kernel_size - stride) + 1) // 2,  # Padding to maintain the resolution
+            bias=False
+        )
+
+    def forward(self, x):
+        # Forward pass: apply the learnable Conv1D
+        basis_coefficients = self.conv1d(x)  # Shape: (batch_size, num_filters, num_frames)
+        return basis_coefficients
+
+
+class WaveformDecoder(nn.Module):
+    def __init__(self, num_filters, kernel_size, stride=None):
+        super(WaveformDecoder, self).__init__()
+        stride = stride if stride else kernel_size // 2
+
+        self.deconv1d = nn.ConvTranspose1d(
+            in_channels=num_filters,
+            out_channels=1,  # Output is a single-channel waveform
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=((kernel_size - stride) + 1) // 2,  # Padding similar to encoder
+            bias=False
+        )
+
+    def forward(self, masked_basis):
+        if masked_basis.ndim < 4:
+            return self.deconv1d(masked_basis)
+
+        separated_sources = []
+        # Decode each source using the transposed convolution
+        for i in range(masked_basis.size(1)):
+            separated = self.deconv1d(masked_basis[:, i])  # Decode each source separately
+            separated_sources.append(separated)
+
+        # Stack all separated sources
+        separated_sources = torch.stack(separated_sources, dim=1)  # Shape: (batch_size, num_sources, 1, num_samples)
+
+        return separated_sources.squeeze(2)
+
+
 class TDConvNetpp(nn.Module):
     """Improved Temporal Convolutional network used in [1] (TDCN++)
 
@@ -297,7 +345,8 @@ class TDConvNetpp(nn.Module):
         self,
         in_chan,
         n_src,
-        enc_dec_kwargs,
+        encoder,
+        decoder,
         out_chan=None,
         n_blocks=8,
         n_repeats=3,
@@ -321,8 +370,8 @@ class TDConvNetpp(nn.Module):
         self.conv_kernel_size = conv_kernel_size
         self.norm_type = norm_type
         self.mask_act = mask_act
-
-        self.enc, self.dec = make_enc_dec(**enc_dec_kwargs)
+        self.encoder = encoder
+        self.decoder = decoder
 
         layer_norm = norms.get(norm_type)(in_chan)
         bottleneck_conv = nn.Conv1d(in_chan, bn_chan, 1)
@@ -377,10 +426,10 @@ class TDConvNetpp(nn.Module):
         """
 
         wave = wave.unsqueeze(1)
-        mixture_w = self.enc(wave)
+        encoded_wave = self.encoder(wave)
 
-        batch, n_filters, n_frames = mixture_w.size()
-        output = self.bottleneck(mixture_w)
+        batch, n_filters, n_frames = encoded_wave.size()
+        output = self.bottleneck(encoded_wave)
         output_copy = output
 
         skip_connection = 0.0
@@ -412,14 +461,12 @@ class TDConvNetpp(nn.Module):
 
         weights = self.consistency(mask_inp.mean(-1))
         weights = torch.nn.functional.softmax(weights, -1)
+        masked_tf_rep = est_mask * encoded_wave.unsqueeze(1)
 
-        masked_tf_rep = est_mask * mixture_w.unsqueeze(1)
+        est_source = self.decoder(masked_tf_rep)
+        est_source = mixture_consistency(wave, est_source, weights.unsqueeze(-1))
 
-        est_wave = self.dec(masked_tf_rep)
-
-        # TODO apply weights
-
-        return est_mask, est_wave, weights
+        return est_mask, est_source, weights
 
     def get_config(self):
         config = {
@@ -436,5 +483,78 @@ class TDConvNetpp(nn.Module):
             "mask_act": self.mask_act,
         }
         return config
+
+
+from typing import Optional, List
+
+
+def mixture_consistency(
+    mixture: torch.Tensor,
+    est_sources: torch.Tensor,
+    src_weights: Optional[torch.Tensor] = None,
+    dim: int = 1,
+) -> torch.Tensor:
+    """Applies mixture consistency to a tensor of estimated sources.
+
+    Args:
+        mixture (torch.Tensor): Mixture waveform or TF representation.
+        est_sources (torch.Tensor): Estimated sources waveforms or TF representations.
+        src_weights (torch.Tensor): Consistency weight for each source.
+            Shape needs to be broadcastable to `est_source`.
+            We make sure that the weights sum up to 1 along dim `dim`.
+            If `src_weights` is None, compute them based on relative power.
+        dim (int): Axis which contains the sources in `est_sources`.
+
+    Returns
+        torch.Tensor with same shape as `est_sources`, after applying mixture
+        consistency.
+
+    Examples
+        >>> # Works on waveforms
+        >>> mix = torch.randn(10, 16000)
+        >>> est_sources = torch.randn(10, 2, 16000)
+        >>> new_est_sources = mixture_consistency(mix, est_sources, dim=1)
+        >>> # Also works on spectrograms
+        >>> mix = torch.randn(10, 514, 400)
+        >>> est_sources = torch.randn(10, 2, 514, 400)
+        >>> new_est_sources = mixture_consistency(mix, est_sources, dim=1)
+
+    .. note::
+        This method can be used only in 'complete' separation tasks, otherwise
+        the residual error will contain unwanted sources. For example, this
+        won't work with the task `"sep_noisy"` from WHAM.
+
+    References
+        Scott Wisdom et al. "Differentiable consistency constraints for improved
+        deep speech enhancement", ICASSP 2019.
+    """
+    # If the source weights are not specified, the weights are the relative
+    # power of each source to the sum. w_i = P_i / (P_all), P for power.
+    if src_weights is None:
+        all_dims: List[int] = torch.arange(est_sources.ndim).tolist()
+        all_dims.pop(dim)  # Remove source axis
+        all_dims.pop(0)  # Remove batch axis
+        src_weights = torch.mean(est_sources**2, dim=all_dims, keepdim=True)
+    # Make sure that the weights sum up to 1
+    norm_weights = torch.sum(src_weights, dim=dim, keepdim=True) + 1e-8
+    src_weights = src_weights / norm_weights
+
+    # Compute residual mix - sum(est_sources)
+    if mixture.ndim == est_sources.ndim - 1:
+        # mixture (batch, *), est_sources (batch, n_src, *)
+        residual = (mixture - est_sources.sum(dim=dim)).unsqueeze(dim)
+    elif mixture.ndim == est_sources.ndim:
+        # mixture (batch, 1, *), est_sources (batch, n_src, *)
+        residual = mixture - est_sources.sum(dim=dim, keepdim=True)
+    else:
+        n, m = est_sources.ndim, mixture.ndim
+        raise RuntimeError(
+            f"The size of the mixture tensor should match the "
+            f"size of the est_sources tensor. Expected mixture"
+            f"tensor to have {n} or {n-1} dimension, found {m}."
+        )
+    # Compute remove
+    new_sources = est_sources + src_weights * residual
+    return new_sources
 
 

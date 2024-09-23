@@ -74,20 +74,9 @@ class BaseModule(LightningModule):
         return self.model.forward(x)
 
     def model_step(self, batch: Any, *args: Any, **kwargs: Any) -> Any:
-        est_mask, est_wave, weights = self.forward(batch["mix"], *args, **kwargs)
+        est_mask, est_source, weights = self.forward(batch["mix"], *args, **kwargs)
 
-
-
-        # mixture_spec = torch.stft(batch["mix"], n_fft=512, win_length=512, hop_length=128, window=torch.hann_window(512, device="cuda") ,return_complex=True)
-        # est_mask, weights = self.forward(mixture_spec.real, *args, **kwargs)
-        # batched_waves = []
-        # for b_idx in range(est_mask.shape[0]):
-        #     spec = est_mask[b_idx] * mixture_spec[b_idx]
-        #     batched_waves.append(torch.istft(spec, n_fft=512, win_length=512, hop_length=128, window=torch.hann_window(512, device="cuda")))
-        # waves = torch.stack(batched_waves)
-        # waves = self.enforce_mixture_consistency_time_domain(batch["mix"], waves, weights, "magsq")
-
-        loss, preds = self.loss(est_wave, batch["audio"]["wave"], return_est=True)
+        loss, preds = self.loss(est_source, batch["audio"]["wave"], return_est=True)
 
         return loss, preds, batch["audio"]["wave"]
 
@@ -106,14 +95,14 @@ class BaseModule(LightningModule):
             **self.logging_cfg,
         )
 
-        self.train_metric(preds, targets, batch["mix"])
+        self.train_metric(preds, targets, batch["mix"], batch["is_supervised"])
         self.log(
             f"train/{self.train_metric.__class__.__name__}",
             self.train_metric,
             **self.logging_cfg,
         )
 
-        self.train_add_metrics(preds, targets, batch["mix"])
+        self.train_add_metrics(preds, targets, batch["mix"], batch["is_supervised"])
         self.log_dict(self.train_add_metrics, **self.logging_cfg)
 
         # Lightning keeps track of `training_step` outputs and metrics on GPU for
@@ -130,14 +119,14 @@ class BaseModule(LightningModule):
             **self.logging_cfg,
         )
 
-        self.valid_metric(preds, targets, mix=batch["mix"])
+        self.valid_metric(preds, targets, batch["mix"], batch["is_supervised"])
         self.log(
             f"valid/{self.valid_metric.__class__.__name__}",
             self.valid_metric,
             **self.logging_cfg,
         )
 
-        self.valid_add_metrics(preds, targets, batch["mix"])
+        self.valid_add_metrics(preds, targets, batch["mix"], batch["is_supervised"])
         self.log_dict(self.valid_add_metrics, **self.logging_cfg)
         return {"loss": loss}
 
@@ -160,14 +149,14 @@ class BaseModule(LightningModule):
             f"test/{self.loss.__class__.__name__}", loss, **self.logging_cfg
         )
 
-        self.test_metric(preds, targets, batch["mix"])
+        self.test_metric(preds, targets, batch["mix"], batch["is_supervised"])
         self.log(
             f"test/{self.test_metric.__class__.__name__}",
             self.test_metric,
             **self.logging_cfg,
         )
 
-        self.test_add_metrics(preds, targets, batch["mix"])
+        self.test_add_metrics(preds, targets, batch["mix"], batch["is_supervised"])
         self.log_dict(self.test_add_metrics, **self.logging_cfg)
         return {"loss": loss}
 

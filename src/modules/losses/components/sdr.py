@@ -72,9 +72,21 @@ class MultiSrcNegSDR(_Loss):
         else:
             e_noise = est_targets - scaled_targets
         # [batch, n_src]
-        pair_wise_sdr = torch.sum(scaled_targets**2, dim=2) / (
-            torch.sum(e_noise**2, dim=2) + self.EPS
-        )
+        pair_wise_sdr = torch.sum(scaled_targets**2, dim=2) / (torch.sum(e_noise**2, dim=2) + self.EPS)
         if self.take_log:
             pair_wise_sdr = 10 * torch.log10(pair_wise_sdr + self.EPS)
         return -torch.mean(pair_wise_sdr, dim=-1)
+
+class NegativeThresholdSNR(_Loss):
+    def __init__(self, snr_max=30, epsilon = 1e-8, *args, **kwargs):
+        super().__init__()
+        self.tau = 10**(-snr_max /10)
+        self.epsilon = epsilon
+
+    def forward(self, targets, est_targets):
+        signal_power = torch.sum(targets ** 2, dim=2)
+        noise_power = torch.sum((targets - est_targets) ** 2, dim=2)
+
+        snr_loss = -10 * torch.log10(signal_power / (noise_power + self.tau * signal_power + self.epsilon))
+
+        return torch.mean(snr_loss, dim=-1)

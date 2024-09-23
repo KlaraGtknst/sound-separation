@@ -1,0 +1,44 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
+defaults:
+  - override /datamodule: birdset_datamodule.yaml
+  - override /module: base_module.yaml
+  - override /callbacks: default.yaml
+  - override /trainer: gpu.yaml
+  - override /logger: wandb.yaml
+  - override /paths: cluster.yaml
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+tags: ["test_run"]
+
+seed: 0
+
+name: ${datamodule.hf_dataset.name}-${module.loss.loss_func.sdr_type}-${trainer.min_epochs}e-${seed}
+
+trainer:
+  min_epochs: 30
+  max_epochs: 30
+  gradient_clip_val: 3.0
+  fast_dev_run: False
+
+module:
+  loss:
+    loss_func:
+      _target_: src.modules.losses.NegativeThresholdSNR
+      sdr_type: ngsnr
+  optimizer:
+    lr: 3.0e-4
+
+datamodule:
+  hf_dataset:
+    name: XCM
+
+logger:
+  wandb:
+    tags: ${tags}
+    group: "testing"

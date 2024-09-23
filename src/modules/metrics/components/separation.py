@@ -1,17 +1,25 @@
-from typing import Any
-
+from itertools import permutations
 from torchmetrics import Metric
-from torchmetrics.audio import ScaleInvariantSignalNoiseRatio as sisnr
-from torchmetrics.audio import SignalNoiseRatio as snr
+from torchmetrics.audio import ScaleInvariantSignalNoiseRatio as SISNR
+from torchmetrics.audio import SignalNoiseRatio as SNR
+from torchmetrics.audio import SignalDistortionRatio as SDR
+from torchmetrics.audio.snr import scale_invariant_signal_noise_ratio
 import torch
 from torch import Tensor
-import itertools
 
-class SignalNoiseRatio(snr):
+
+
+class SignalNoiseRatio(SNR):
     def update(self, preds: Tensor, target: Tensor, *args, **kwargs) -> None:
         super().update(preds=preds, target=target)
 
-class ScaleInvariantSignalNoiseRatio(sisnr):
+
+class SignalDistortionRatio(SDR):
+    def update(self, preds: Tensor, target: Tensor, *args, **kwargs) -> None:
+        super().update(preds=preds, target=target)
+
+
+class ScaleInvariantSignalNoiseRatio(SISNR):
     def update(self, preds: Tensor, target: Tensor, *args, **kwargs) -> None:
         super().update(preds=preds, target=target)
 
@@ -19,13 +27,34 @@ class ScaleInvariantSignalNoiseRatio(sisnr):
 class ScaleInvariantSignalNoiseRatioImprovement(Metric):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.add_module("s1", ScaleInvariantSignalNoiseRatio())
-        self.add_module("s2", ScaleInvariantSignalNoiseRatio())
+        self.add_state("improvements", [])
 
-    def update(self, preds: Tensor, target: Tensor, mixture: Tensor, *args, **kwargs) -> None:
-        mixture = mixture.unsqueeze(1).expand(-1, 2, -1)
-        self.s1.update(target, preds)
-        self.s2.update(target, mixture)
+    def update(self, preds: Tensor, target: Tensor, mixture: Tensor, is_supervised: Tensor = False, *args, **kwargs) -> None:
+        if not is_supervised.any():
+            return
+        preds = preds[is_supervised]
+        target = target[is_supervised]
+        mixture = mixture[is_supervised]
+        mixture = mixture.unsqueeze(1).expand_as(target)
+
+        # Compute SI-SNR for each sample
+        sisnr_est_values = scale_invariant_signal_noise_ratio(target, preds)  # Returns a tensor of SI-SNR values per sample
+        sisnr_mix_values = scale_invariant_signal_noise_ratio(target, mixture)
+        improvements = sisnr_est_values - sisnr_mix_values
+        self.improvements.append(improvements)
 
     def compute(self):
-        return self.s1.compute() - self.s2.compute()
+        # Concatenate all improvements and compute the mean
+        if not len(self.improvements):
+            return None
+        all_improvements = torch.cat(self.improvements)
+        return all_improvements.mean()
+
+
+class MoMi(ScaleInvariantSignalNoiseRatioImprovement):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.__class__.__name__ = "MoMi"
+
+    def update(self, preds: Tensor, target: Tensor, mixture: Tensor, is_supervised: Tensor = False, *args, **kwargs) -> None:
+        super().update(preds, target, mixture, torch.ones_like(is_supervised).bool())

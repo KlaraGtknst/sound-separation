@@ -2,7 +2,7 @@
 torch>=2.3.1
 #torchvision>=0.11.0
 pytorch-lightning==2.3.2
-torchmetrics==1.4.0
+torchmetrics>=1.4.1
 
 # --------- huggingface --------- #
 #transformers==4.42.3
@@ -20,25 +20,32 @@ wandb
 # comet-ml
 
 # --------- others --------- #
-pyrootutils
+pyrootutils>=1.0.4
 #pre-commit
 #rich
 #pytest
 #sh; platform_system != 'Windows'
-omegaconf
+omegaconf>=2.3.0
 tqdm
 #tensorflow
 #pynvml
 
 # --------- data --------- #
-numpy==1.26.4
+numpy>=2.0.1
 soundfile==0.12.1
 pandas
 
 # --------- visualization --------- #
 seaborn
 scikit_learn
-matplotlib
+matplotlib>=3.9.0
 ipython
 #grad-cam==1.3.1
 #ttach==0.0.3
+
+scipy>=1.14.0
+torchaudio>=2.4.0
+asteroid-filterbanks>=0.4.0
+scikit-learn>=1.5.1
+librosa>=0.10.2.post1
+setuptools>=72.1.0

@@ -42,15 +42,15 @@ hf_dataset:
 datasets:
   train:
     _target_: src.datamodules.datasets.BirdsetDataset
-    sample_rate: 32000
+    sample_rate: 16000
     column_selection: ["audio", "mix", "start_time", "end_time", is_supervised]
 
   valid:
     _target_: src.datamodules.datasets.BirdsetDataset
-    sample_rate: 32000
+    sample_rate: ${datamodule.datasets.train.sample_rate}
     column_selection: ["audio", "mix", "start_time", "end_time", is_supervised]
 
   test:
     _target_: src.datamodules.datasets.BirdsetDataset
-    sample_rate: 32000
+    sample_rate: ${datamodule.datasets.train.sample_rate}
     column_selection: ["audio", "mix", "start_time", "end_time", is_supervised]
