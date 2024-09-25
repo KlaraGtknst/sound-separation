@@ -45,7 +45,7 @@ class NormalizePeak(Normalization):
     def __init__(self, target_peak=0.2):
         self.target_peak = target_peak
 
-    def __call__(self, data):
+    def __call__(self, data: np.array):
 
         input_values = data["audio"]["wave"] if type(data) is dict else data
 
