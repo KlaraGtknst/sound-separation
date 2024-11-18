@@ -90,3 +90,7 @@ class NegativeThresholdSNR(_Loss):
         snr_loss = -10 * torch.log10(signal_power / (noise_power + self.tau * signal_power + self.epsilon))
 
         return torch.mean(snr_loss, dim=-1)
+
+
+
+

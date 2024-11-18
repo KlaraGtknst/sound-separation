@@ -64,8 +64,8 @@ class SupervisedAudioMixing(AudioTransform):
 
     def set_dataset(self, dataset: BirdsetDataset):
         supervised_birds = dataset.hf_ds_supervised["filepath"]
-        log.info(f"Supervised background choices: {len(self.audio_paths)}")
-        log.info(f"Supervised bird choices: {len(supervised_birds)}")
+        log.info(f"Supervised background choices: {len(self.audio_paths)}") # Both: 9.982
+        log.info(f"Supervised bird choices: {len(supervised_birds)}") # XCM: 4.831 | XCL: 35.534
         self.audio_paths += supervised_birds
 
     def _find_audio_files(self, audio_paths: list[str]):

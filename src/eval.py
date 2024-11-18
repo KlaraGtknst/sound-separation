@@ -83,10 +83,6 @@ def main(cfg: DictConfig) -> Tuple[dict, dict]:
         log.info("Logging hyperparameters!")
         utils.log_hyperparameters(object_dict)
 
-    # Log metadata
-    log.info("Logging metadata!")
-    utils.log_metadata(cfg)
-
     if cfg.get("predict"):
         log.info("Starting predicting!")
         predictions = trainer.predict(

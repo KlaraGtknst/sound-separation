@@ -1,4 +1,4 @@
-model:
+model: # 6.8M params
   _target_: src.modules.models.tdcnn.TDConvNetpp
   in_chan: 256
   n_src: 4

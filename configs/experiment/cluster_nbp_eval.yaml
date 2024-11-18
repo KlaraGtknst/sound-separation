@@ -14,7 +14,7 @@ defaults:
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
 
-ckpt_path: /mnt/stud/work/deeplearninglab/ss2024/sound-separation/checkpoints/XCL/epoch013-loss_valid-11.2518-metric_valid11.2493.ckpt
+#ckpt_path: /mnt/stud/work/deeplearninglab/ss2024/sound-separation/checkpoints/XCL/epoch013-loss_valid-11.2518-metric_valid11.2493.ckpt
 
 tags: ["test_run"]
 
@@ -36,8 +36,13 @@ module:
     lr: 3.0e-4
 
 datamodule:
+  _target_: src.datamodules.bird_datamodule_eval.BirdsetDataModule
   hf_dataset:
-    name: XCL
+    name: PER_scape
+    split: test
+  mapping:
+    2:
+      max_segments: null
 
 logger:
   wandb:

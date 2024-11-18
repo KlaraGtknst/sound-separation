@@ -42,7 +42,7 @@ class NormalizeDBFS(Normalization):
         return audio
 
 class NormalizePeak(Normalization):
-    def __init__(self, target_peak=0.2):
+    def __init__(self, target_peak=0.25):
         self.target_peak = target_peak
 
     def __call__(self, data: np.array):

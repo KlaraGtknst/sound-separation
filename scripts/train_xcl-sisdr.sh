@@ -6,7 +6,7 @@
 #SBATCH --job-name=dll-separation
 #SBATCH --gres=gpu:1
 #SBATCH --array=0
-#SBATCH --exclude=gpu-v100-[1-4]
+#SBATCH --exclude=gpu-v100-[1-4],gpu-a100-[3,4]
 
 source /mnt/stud/home/mwirth/.zshrc
 source /mnt/stud/home/mwirth/miniconda3/etc/profile.d/conda.sh

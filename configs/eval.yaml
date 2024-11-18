@@ -2,18 +2,27 @@
 
 defaults:
   - _self_
-  - datamodule: mnist.yaml # choose datamodule with `test_dataloader()` for evaluation
-  - module: mnist.yaml
-  - logger: null
-  - trainer: default.yaml
+  - datamodule: birdset_datamodule.yaml
+  - module: base_module.yaml
+  - callbacks: none.yaml
+  - logger: wandb.yaml # set logger here or use command line (e.g. `python train.py logger=tensorboard`)
+  - trainer: gpu.yaml
   - paths: default.yaml
   - extras: default.yaml
   - hydra: default.yaml
+
+  - experiment: cluster_nbp_eval.yaml  # !important
 
 task_name: "eval"
 predict: False
 
 tags: ["dev"]
 
+train: False
+
+
 # passing checkpoint path is necessary for evaluation
-ckpt_path: ???
+#ckpt_path: /home/mwirth/projects/sound-seperation/checkpoints/new/epoch015-loss_valid-10.6268-metric_valid10.6287.ckpt
+#ckpt_path: /home/mwirth/projects/sound-seperation/checkpoints/new/epoch059-xcm_no_normal-loss_valid-10.4859-metric_valid10.4858.ckpt
+#ckpt_path: /mnt/stud/work/deeplearninglab/ss2024/sound-separation/checkpoints/XCM-no_normal/epoch059-loss_valid-10.4859-metric_valid10.4858.ckpt
+ckpt_path: /mnt/stud/work/deeplearninglab/ss2024/sound-separation/checkpoints/XCL/epoch013-loss_valid-11.2518-metric_valid11.2493.ckpt
